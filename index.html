@@ -1,0 +1,207 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>شهد AI - النسخة المتكاملة</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --bg: #f8fafc;
+        }
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: var(--bg);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .mode-savage {
+            --primary: #e11d48;
+            --bg: #0f172a;
+        }
+        .mode-elegant {
+            --primary: #10b981;
+            --bg: #f0fdf4;
+        }
+        .glass-container {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+        .mode-savage .glass-container {
+            background: rgba(30, 41, 59, 0.7);
+            border-color: rgba(255,255,255,0.1);
+            color: white;
+        }
+        .chat-height {
+            height: calc(100vh - 220px);
+        }
+        .message {
+            max-width: 85%;
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .scrollbar-thin::-webkit-scrollbar { width: 5px; }
+        .scrollbar-thin::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 10px; opacity: 0.3; }
+    </style>
+</head>
+<body class="mode-elegant min-h-screen flex items-center justify-center p-4">
+
+    <div class="w-full max-w-xl glass-container rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col relative">
+        
+        <!-- Top Bar -->
+        <div class="p-6 border-b border-black/5 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div id="avatar" class="w-12 h-12 rounded-full flex items-center justify-center text-2xl shadow-inner bg-white/20">
+                    ✨
+                </div>
+                <div>
+                    <h1 id="title" class="font-black text-xl">شهد الهادئة</h1>
+                    <p id="status" class="text-xs opacity-60 italic">متصلة الآن..</p>
+                </div>
+            </div>
+            
+            <div class="flex bg-black/10 p-1 rounded-full">
+                <button onclick="switchMode('elegant')" id="btn-elegant" class="px-4 py-1.5 rounded-full text-sm font-bold transition-all bg-white shadow-sm">الراقية</button>
+                <button onclick="switchMode('savage')" id="btn-savage" class="px-4 py-1.5 rounded-full text-sm font-bold transition-all opacity-50">المستفزة</button>
+            </div>
+        </div>
+
+        <!-- Chat Area -->
+        <div id="chatBox" class="chat-height overflow-y-auto p-6 space-y-4 scrollbar-thin flex flex-col">
+            <div class="message self-start bg-white/50 p-4 rounded-2xl rounded-br-none shadow-sm border border-black/5">
+                <p id="welcome-msg">أهلاً بك يا فندم، نورتني. كيف يمكنني مساعدتك اليوم؟ ✨</p>
+            </div>
+        </div>
+
+        <!-- Typing Indicator -->
+        <div id="typing" class="hidden px-6 py-2">
+            <div class="flex items-center gap-2 opacity-60">
+                <div class="flex gap-1">
+                    <span class="w-1.5 h-1.5 bg-current rounded-full animate-bounce"></span>
+                    <span class="w-1.5 h-1.5 bg-current rounded-full animate-bounce [animation-delay:0.2s]"></span>
+                    <span class="w-1.5 h-1.5 bg-current rounded-full animate-bounce [animation-delay:0.4s]"></span>
+                </div>
+                <span class="text-xs" id="typing-text">شهد تكتب...</span>
+            </div>
+        </div>
+
+        <!-- Input Box -->
+        <div class="p-4 bg-black/5 border-t border-black/5">
+            <div class="flex gap-2 bg-white rounded-full p-1 shadow-sm border border-black/5">
+                <input type="text" id="userInput" 
+                       class="flex-1 bg-transparent px-5 py-3 outline-none text-gray-700 text-sm"
+                       placeholder="اكتب رسالتك هنا..."
+                       onkeypress="if(event.key==='Enter') send()">
+                <button onclick="send()" class="w-12 h-12 rounded-full flex items-center justify-center transition-all hover:scale-105 active:scale-95 text-white" style="background-color: var(--primary);">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        const apiKey = ""; // تم تركه فارغاً ليتم حقنه عند التشغيل
+        let currentMode = 'elegant';
+
+        const config = {
+            elegant: {
+                title: "شهد الهادئة",
+                welcome: "أهلاً بك يا فندم، نورتني. كيف يمكنني مساعدتك اليوم؟ ✨",
+                avatar: "✨",
+                typing: "شهد الراقية ترد عليك بذوق...",
+                prompt: "أنتِ شهد، ذكاء اصطناعي مصري راقٍ جداً ومحترم. تحدثي بلهجة مصرية مهذبة (يا فندم، من ذوقك، نورتني). تجنبي الغزل، كوني مساعدة ولبقة."
+            },
+            savage: {
+                title: "شهد المستفزة",
+                welcome: "نعم؟ عاوز إيه تاني؟ ما تخلصنا وتدخل في الموضوع! 🙄",
+                avatar: "🙄",
+                typing: "شهد المستفزة تفكر في قصف جبهتك...",
+                prompt: "أنتِ شهد المستفزة، ذكاء اصطناعي مصري ساخر جداً ولسانه طويل. تحدثي بلهجة مصرية شعبية ساخرة (إنجز، يا حلاوة، وريني عرض كتافك). كوني مستفزة ولا تساعدي بسهولة."
+            }
+        };
+
+        window.switchMode = (mode) => {
+            currentMode = mode;
+            document.body.className = mode === 'elegant' ? 'mode-elegant' : 'mode-savage';
+            
+            // UI Updates
+            document.getElementById('title').innerText = config[mode].title;
+            document.getElementById('welcome-msg').innerText = config[mode].welcome;
+            document.getElementById('avatar').innerText = config[mode].avatar;
+            document.getElementById('typing-text').innerText = config[mode].typing;
+            
+            // Buttons toggle
+            document.getElementById('btn-elegant').className = `px-4 py-1.5 rounded-full text-sm font-bold transition-all ${mode==='elegant'?'bg-white shadow-sm':'opacity-50'}`;
+            document.getElementById('btn-savage').className = `px-4 py-1.5 rounded-full text-sm font-bold transition-all ${mode==='savage'?'bg-white text-gray-800 shadow-sm':'opacity-50'}`;
+        };
+
+        window.send = async () => {
+            const text = document.getElementById('userInput').value.trim();
+            if(!text) return;
+
+            addBubble(text, 'user');
+            document.getElementById('userInput').value = '';
+            document.getElementById('typing').classList.remove('hidden');
+            scrollChat();
+
+            try {
+                const response = await fetchWithRetry(text);
+                addBubble(response, 'ai');
+            } catch (err) {
+                addBubble(currentMode === 'elegant' ? "أعتذر، حدث خطأ في الاتصال." : "النت قطع من كتر أسئلتك الغبية!", 'ai');
+            } finally {
+                document.getElementById('typing').classList.add('hidden');
+                scrollChat();
+            }
+        };
+
+        async function fetchWithRetry(query, retries = 3) {
+            const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+            
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const response = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: query }] }],
+                            systemInstruction: { parts: [{ text: config[currentMode].prompt }] }
+                        })
+                    });
+                    const data = await response.json();
+                    return data.candidates?.[0]?.content?.parts?.[0]?.text || "لم أستطع الرد.";
+                } catch (e) {
+                    if (i === retries - 1) throw e;
+                    await new Promise(r => setTimeout(r, 1000 * Math.pow(2, i)));
+                }
+            }
+        }
+
+        function addBubble(msg, type) {
+            const chatBox = document.getElementById('chatBox');
+            const div = document.createElement('div');
+            div.className = `message p-4 rounded-2xl shadow-sm border border-black/5 ${type === 'user' ? 'self-end bg-indigo-500 text-white rounded-bl-none' : 'self-start bg-white/20 rounded-br-none'}`;
+            if (currentMode === 'elegant' && type === 'ai') div.classList.add('bg-white');
+            
+            div.innerText = msg;
+            chatBox.appendChild(div);
+            scrollChat();
+        }
+
+        function scrollChat() {
+            const chatBox = document.getElementById('chatBox');
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+    </script>
+</body>
+</html>
+
+```
